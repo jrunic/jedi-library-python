@@ -21,18 +21,28 @@ Sheet ID fallback chain (highest priority first):
 import json
 import logging
 import os
+import sys
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import IntEnum
-from typing import Optional
+from typing import Any, Callable, Optional, cast
+
+google: Any = None
+ServiceAccountCredentials: Any = None
+build: Optional[Callable[..., Any]] = None
 
 # ---------------------------------------------------------------------------
 # Optional Google auth imports – graceful fallback so unit tests work without
 # the package installed when the module is imported (mocking handles the rest).
 # ---------------------------------------------------------------------------
 try:
-    import google.auth  # type: ignore
-    from googleapiclient.discovery import build  # type: ignore
+    import google.auth as _google_auth  # type: ignore
+    from google.oauth2.service_account import Credentials as _ServiceAccountCredentials  # type: ignore
+    from googleapiclient.discovery import build as _build  # type: ignore
+
+    google = _google_auth
+    ServiceAccountCredentials = _ServiceAccountCredentials
+    build = _build
 
     _GOOGLE_LIBS_AVAILABLE = True
 except ImportError:  # pragma: no cover
@@ -61,7 +71,7 @@ DEFAULT_LOG_SHEET_ID: str = "1C2HKxUhA7e-w_0bNFUFuPcpqslTFrYu7Wb214BXwSLw"
 # Private module-level state (mirrors _state.gs)
 # ---------------------------------------------------------------------------
 
-_buffer: list = []
+_buffer: list[dict[str, str]] = []
 _level: int = Level.INFO
 _context: str = ""
 _execution_id: str = ""
@@ -83,10 +93,10 @@ def _resolve_user_email() -> str:
     types may expose ``client_id`` instead.  Falls back to an empty string so
     that failures here never block initialisation.
     """
-    if not _GOOGLE_LIBS_AVAILABLE:
-        return ""
     try:
-        credentials, _ = google.auth.default()
+        credentials = _get_google_credentials()
+        if credentials is None:
+            return ""
         return (
             getattr(credentials, "service_account_email", None)
             or getattr(credentials, "client_id", None)
@@ -94,6 +104,40 @@ def _resolve_user_email() -> str:
         )
     except Exception:  # noqa: BLE001
         return ""
+
+def _get_google_credentials() -> Optional[Any]:
+    """
+    Resolve Google credentials with fallback compatible with this project.
+
+    Priority:
+      1) ADC via google.auth.default()
+      2) Service account JSON from env GOOGLE_CREDENTIALS_FILE (default: credentials.json)
+    """
+    if not _GOOGLE_LIBS_AVAILABLE or google is None:
+        return None
+
+    try:
+        google_auth = cast(Any, google)
+        creds, _ = google_auth.default()
+        return creds
+    except Exception:
+        pass
+
+    try:
+        if ServiceAccountCredentials is None:
+            return None
+        credentials_path = os.environ.get("GOOGLE_CREDENTIALS_FILE", "credentials.json")
+        if not os.path.isabs(credentials_path):
+            credentials_path = os.path.abspath(credentials_path)
+        if not os.path.exists(credentials_path):
+            return None
+        service_account_credentials = cast(Any, ServiceAccountCredentials)
+        return service_account_credentials.from_service_account_file(
+            credentials_path,
+            scopes=["https://www.googleapis.com/auth/spreadsheets"],
+        )
+    except Exception:
+        return None
 
 
 def _add_entry(level: int, level_name: str, message: str, metadata_str: str) -> None:
@@ -106,7 +150,8 @@ def _add_entry(level: int, level_name: str, message: str, metadata_str: str) -> 
 
     _buffer.append(
         {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            # Google Sheets reconhece automaticamente este formato como datetime.
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "context": _context,
             "level": level_name,
             "message": message,
@@ -271,7 +316,26 @@ def flush() -> None:
             return
 
         if not _log_sheet_id:
-            logger.warning("[jedi_log] logSheetId not configured. Buffer discarded.")
+            msg = "[jedi_log] logSheetId not configured. Buffer discarded."
+            logger.warning(msg)
+            print(msg, file=sys.stderr)
+            _buffer = []
+            return
+
+        if not _GOOGLE_LIBS_AVAILABLE:
+            msg = (
+                "[jedi_log] Google libs unavailable (google-auth/googleapiclient). "
+                "Buffer discarded."
+            )
+            logger.warning(msg)
+            print(msg, file=sys.stderr)
+            _buffer = []
+            return
+
+        if build is None:
+            msg = "[jedi_log] Google Sheets client builder unavailable. Buffer discarded."
+            logger.warning(msg)
+            print(msg, file=sys.stderr)
             _buffer = []
             return
 
@@ -289,8 +353,20 @@ def flush() -> None:
             for entry in _buffer
         ]
 
+        credentials = _get_google_credentials()
+        if credentials is None:
+            msg = (
+                "[jedi_log] No Google credentials available (ADC or service account file). "
+                "Buffer discarded."
+            )
+            logger.warning(msg)
+            print(msg, file=sys.stderr)
+            _buffer = []
+            return
+
         # Single batch append via Google Sheets API
-        service = build("sheets", "v4")
+        build_sheets_service = cast(Callable[..., Any], build)
+        service = build_sheets_service("sheets", "v4", credentials=credentials)
         body = {"values": rows}
         range_notation = f"{LOG_SHEET_TAB}!A1"
 
@@ -306,7 +382,9 @@ def flush() -> None:
         _buffer = []
 
     except Exception as exc:  # noqa: BLE001
-        logger.warning("[jedi_log] Error during flush: %s", exc)
+        msg = f"[jedi_log] Error during flush: {exc}"
+        logger.warning(msg)
+        print(msg, file=sys.stderr)
         _buffer = []
 
 
