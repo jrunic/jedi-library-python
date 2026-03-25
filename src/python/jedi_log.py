@@ -83,6 +83,15 @@ _user_email: str = ""
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+def _prefix_context(context: str) -> str:
+    """Prefixa contextos do worker Python para facilitar rastreabilidade."""
+    c = (context or "").strip()
+    if not c:
+        return "python:"
+    if c.startswith("python:"):
+        return c
+    return f"python:{c}"
+
 
 def _resolve_user_email() -> str:
     """
@@ -184,7 +193,7 @@ def init(config: dict) -> None:
 
     try:
         _buffer = []
-        _context = config.get("context", "")
+        _context = _prefix_context(config.get("context", ""))
         _execution_id = config.get("executionId", "")
         _level = Level.INFO
 
@@ -398,6 +407,12 @@ def set_level(level: int) -> None:
     global _level
     if isinstance(level, int):
         _level = level
+
+
+def set_context(context: str) -> None:
+    """Atualiza o contexto corrente para as próximas entradas em buffer."""
+    global _context
+    _context = _prefix_context(context)
 
 
 def is_debug_enabled() -> bool:
