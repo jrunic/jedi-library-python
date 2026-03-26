@@ -119,18 +119,11 @@ def _get_google_credentials() -> Optional[Any]:
     Resolve Google credentials with fallback compatible with this project.
 
     Priority:
-      1) ADC via google.auth.default()
-      2) Service account JSON from env GOOGLE_CREDENTIALS_FILE (default: credentials.json)
+      1) Service account JSON from env GOOGLE_CREDENTIALS_FILE (default: credentials.json)
+      2) ADC via google.auth.default()
     """
     if not _GOOGLE_LIBS_AVAILABLE or google is None:
         return None
-
-    try:
-        google_auth = cast(Any, google)
-        creds, _ = google_auth.default()
-        return creds
-    except Exception:
-        pass
 
     try:
         if ServiceAccountCredentials is None:
@@ -139,12 +132,22 @@ def _get_google_credentials() -> Optional[Any]:
         if not os.path.isabs(credentials_path):
             credentials_path = os.path.abspath(credentials_path)
         if not os.path.exists(credentials_path):
-            return None
+            raise FileNotFoundError(f"credentials.json não encontrado em: {credentials_path}")
+
         service_account_credentials = cast(Any, ServiceAccountCredentials)
         return service_account_credentials.from_service_account_file(
             credentials_path,
+            # jedi_log.flush() usa apenas append na API do Google Sheets.
             scopes=["https://www.googleapis.com/auth/spreadsheets"],
         )
+    except Exception:
+        # Fallback para ADC somente quando não for possível carregar a service account.
+        pass
+
+    try:
+        google_auth = cast(Any, google)
+        creds, _ = google_auth.default()
+        return creds
     except Exception:
         return None
 
