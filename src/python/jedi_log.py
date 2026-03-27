@@ -77,6 +77,7 @@ _context: str = ""
 _execution_id: str = ""
 _log_sheet_id: str = ""
 _user_email: str = ""
+_console_verbose: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -160,18 +161,23 @@ def _add_entry(level: int, level_name: str, message: str, metadata_str: str) -> 
     if level < _level:
         return
 
-    _buffer.append(
-        {
-            # Google Sheets reconhece automaticamente este formato como datetime.
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "context": _context,
-            "level": level_name,
-            "message": message,
-            "executionId": _execution_id,
-            "metadata": metadata_str,
-            "userEmail": _user_email,
-        }
-    )
+    entry = {
+        # Google Sheets reconhece automaticamente este formato como datetime.
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "context": _context,
+        "level": level_name,
+        "message": message,
+        "executionId": _execution_id,
+        "metadata": metadata_str,
+        "userEmail": _user_email,
+    }
+    _buffer.append(entry)
+
+    if _console_verbose:
+        line = f"[{entry['level']}] {entry['context']} - {entry['message']}"
+        if entry["metadata"]:
+            line = f"{line} | metadata={entry['metadata']}"
+        print(line)
 
 
 # ---------------------------------------------------------------------------
@@ -416,6 +422,12 @@ def set_context(context: str) -> None:
     """Atualiza o contexto corrente para as próximas entradas em buffer."""
     global _context
     _context = _prefix_context(context)
+
+
+def set_console_verbose(enabled: bool) -> None:
+    """Ativa ou desativa o espelhamento de logs no console."""
+    global _console_verbose
+    _console_verbose = bool(enabled)
 
 
 def is_debug_enabled() -> bool:
