@@ -25,6 +25,7 @@ import sys
 import traceback
 from datetime import datetime
 from enum import IntEnum
+from pathlib import Path
 from typing import Any, Callable, Optional, cast
 
 google: Any = None
@@ -311,6 +312,95 @@ def debug(message: str, metadata: Optional[dict] = None) -> None:
         logger.warning("[jedi_log] Error in debug(): %s", exc)
 
 
+def _resolve_fallback_dir() -> Path:
+    """
+    Retorna o diretório onde o log de fallback será gravado.
+
+    Prioridade:
+      1. Env var JEDI_LOG_FALLBACK_DIR (definida pelo projeto consumidor)
+      2. /tmp (garantido em qualquer Unix)
+    """
+    env_dir = os.environ.get("JEDI_LOG_FALLBACK_DIR", "").strip()
+    if env_dir:
+        candidate = Path(env_dir).expanduser()
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            probe = candidate / ".write_probe"
+            probe.touch()
+            probe.unlink()
+            return candidate
+        except OSError:
+            pass
+    return Path("/tmp")
+
+
+def _write_fallback_log(entries: list, reason: str) -> None:
+    """
+    Grava entries do buffer em arquivo texto no disco quando o flush para
+    Google Sheets falha, e avisa o operador no stderr.
+
+    Args:
+        entries: snapshot do buffer capturado antes da limpeza.
+        reason:  mensagem de erro que causou a falha no flush.
+    """
+    if not entries:
+        return
+
+    now = datetime.now()
+    context_raw = _context or "etl"
+    context_slug = context_raw.replace(":", "-").replace("/", "-").strip("-") or "etl"
+    filename = f"{now.strftime('%Y%m%d-%H%M%S')}-{context_slug}.log"
+
+    log_dir = _resolve_fallback_dir()
+    log_path = log_dir / filename
+
+    header = [
+        "# jedi_log fallback — flush para Google Sheets FALHOU",
+        f"# Motivo: {reason.strip()}",
+        f"# Gerado em: {now.isoformat()}",
+        f"# Contexto: {context_raw}",
+        f"# Entradas: {len(entries)}",
+        "#",
+        "# timestamp\tcontext\tlevel\tmessage\texecutionId\tmetadata\tuserEmail",
+    ]
+    rows = [
+        "\t".join([
+            e.get("timestamp", ""),
+            e.get("context", ""),
+            e.get("level", ""),
+            e.get("message", ""),
+            e.get("executionId", ""),
+            e.get("metadata", ""),
+            e.get("userEmail", ""),
+        ])
+        for e in entries
+    ]
+
+    try:
+        log_path.write_text("\n".join(header + rows) + "\n", encoding="utf-8")
+        sep = "=" * 70
+        msg = (
+            f"\n{sep}\n"
+            f"  AVISO: jedi_log nao conseguiu gravar na planilha Google Sheets.\n"
+            f"  Motivo: {reason.strip()}\n"
+            f"\n"
+            f"  {len(entries)} entrada(s) de log foram salvas em disco:\n"
+            f"  {log_path}\n"
+            f"\n"
+            f"  Para corrigir: verifique GOOGLE_CREDENTIALS_FILE e a variavel\n"
+            f"  JEDI_LOG_FALLBACK_DIR (atual: {log_dir}).\n"
+            f"{sep}\n"
+        )
+        print(msg, file=sys.stderr)
+    except OSError as write_err:
+        print(
+            f"\n[jedi_log FALLBACK] FALHA AO GRAVAR ARQUIVO DE LOG: {write_err}\n"
+            f"  Motivo original do flush: {reason.strip()}\n"
+            f"  {len(entries)} entradas perdidas.",
+            file=sys.stderr,
+        )
+
+
 def flush() -> None:
     """
     Persist all buffered entries to the Google Sheet in a single API call.
@@ -329,6 +419,9 @@ def flush() -> None:
     """
     global _buffer
 
+    # Snapshot antes de qualquer operação — o buffer será limpo independente do resultado.
+    _snapshot = list(_buffer)
+
     try:
         if not _buffer:
             return
@@ -336,8 +429,8 @@ def flush() -> None:
         if not _log_sheet_id:
             msg = "[jedi_log] logSheetId not configured. Buffer discarded."
             logger.warning(msg)
-            print(msg, file=sys.stderr)
             _buffer = []
+            _write_fallback_log(_snapshot, msg)
             return
 
         if not _GOOGLE_LIBS_AVAILABLE:
@@ -346,15 +439,15 @@ def flush() -> None:
                 "Buffer discarded."
             )
             logger.warning(msg)
-            print(msg, file=sys.stderr)
             _buffer = []
+            _write_fallback_log(_snapshot, msg)
             return
 
         if build is None:
             msg = "[jedi_log] Google Sheets client builder unavailable. Buffer discarded."
             logger.warning(msg)
-            print(msg, file=sys.stderr)
             _buffer = []
+            _write_fallback_log(_snapshot, msg)
             return
 
         # Build the rows matrix — order must match column layout in the sheet
@@ -378,8 +471,8 @@ def flush() -> None:
                 "Buffer discarded."
             )
             logger.warning(msg)
-            print(msg, file=sys.stderr)
             _buffer = []
+            _write_fallback_log(_snapshot, msg)
             return
 
         # Single batch append via Google Sheets API
@@ -402,8 +495,8 @@ def flush() -> None:
     except Exception as exc:  # noqa: BLE001
         msg = f"[jedi_log] Error during flush: {exc}"
         logger.warning(msg)
-        print(msg, file=sys.stderr)
         _buffer = []
+        _write_fallback_log(_snapshot, msg)
 
 
 def set_level(level: int) -> None:
