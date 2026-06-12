@@ -85,3 +85,12 @@ Novos submódulos entram quando há 2 consumidores reais. Exceção registrada p
 - Implementações GAS: `jedi-library-gas/CONTEXTO.md`
 - ADR de split: `$JEDI_BRAIN_FOLDER/81-referencia/decisoes/20260612-jedi-library-trio-repos.md`
 - ADR de pin Python da frota: `$JEDI_BRAIN_FOLDER/81-referencia/decisoes/20260511-versoes-fixas-runtime-frota.md`
+
+## Restrições
+
+- `requires-python = ">=3.12,<3.13"` — nunca usar outra versão; pin da frota (ADR `20260511`).
+- `from jedi_library import <submodulo>` — nunca `import jedi_log` ou `import jedi_ai` direto; convenção do package único.
+- `cost_context` obrigatório em toda chamada de `data_extract_*` — sem ele, a função lança `ValueError` antes de consumir tokens.
+- Prompts para `call_vertex_ai` devem instruir o modelo a responder exclusivamente em JSON — o parser lança `ValueError` em resposta não-JSON.
+- `JEDI_AI_GCP_PROJECT_ID` deve ser variável de ambiente, nunca hardcoded.
+- Nunca suprimir exceções de `data_extract_*` com `except: pass` — `log_usage` de erro já foi registrado; suprimir oculta falhas do pipeline.
