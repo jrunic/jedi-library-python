@@ -1,0 +1,13 @@
+[project]
+name = "jedi-library"
+version = "0.1.0"
+description = "Utilities for Jedi Labs Python projects"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "google-auth>=2.0",
+    "google-api-python-client>=2.0",
+    "google-genai>=1.0",
+]
+
+[tool.uv]
+package = true
