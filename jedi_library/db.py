@@ -93,3 +93,14 @@ def apply_migrations(conn: sqlite3.Connection, package: str, subdir: str = "migr
     violations = conn.execute("PRAGMA foreign_key_check").fetchall()
     if violations:
         raise ValueError(f"Violações de FK detectadas após migrations: {list(violations)}")
+
+
+@contextmanager
+def transaction(conn: sqlite3.Connection) -> Generator[sqlite3.Connection, None, None]:
+    """Context manager: commit em sucesso, rollback+re-raise em exceção."""
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise

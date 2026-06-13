@@ -104,3 +104,25 @@ def test_apply_migrations_splitter_ponto_virgula_em_string(tmp_path):
     count = conn.execute("SELECT COUNT(*) FROM meta").fetchone()[0]
     assert count >= 1
     conn.close()
+
+
+def test_transaction_commit_em_sucesso(tmp_path):
+    conn = db.open_connection(tmp_path / "test.db")
+    conn.execute("CREATE TABLE t (x INTEGER)")
+    conn.commit()
+    with db.transaction(conn):
+        conn.execute("INSERT INTO t VALUES (1)")
+    assert conn.execute("SELECT COUNT(*) FROM t").fetchone()[0] == 1
+    conn.close()
+
+
+def test_transaction_rollback_em_excecao(tmp_path):
+    conn = db.open_connection(tmp_path / "test.db")
+    conn.execute("CREATE TABLE t (x INTEGER)")
+    conn.commit()
+    with pytest.raises(RuntimeError):
+        with db.transaction(conn):
+            conn.execute("INSERT INTO t VALUES (1)")
+            raise RuntimeError("falha intencional")
+    assert conn.execute("SELECT COUNT(*) FROM t").fetchone()[0] == 0
+    conn.close()
