@@ -66,7 +66,7 @@ def list_files(
     )
 ```
 
-### Testes (`test/python/test_assets.py`)
+### Testes (`test/test_assets.py`)
 
 - `read_text("jedi_library", "sql/test_fixture.sql")` retorna conteúdo esperado (criar fixture).
 - `list_files("jedi_library", "sql", "*.sql")` retorna lista ordenada.

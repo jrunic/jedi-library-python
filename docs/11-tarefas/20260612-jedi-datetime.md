@@ -46,7 +46,7 @@ def today(tz: ZoneInfo) -> date:
     return now(tz).date()
 ```
 
-### Testes (`test/python/test_datetime_utils.py`)
+### Testes (`test/test_datetime_utils.py`)
 
 ```python
 from datetime import date, datetime

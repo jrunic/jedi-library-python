@@ -66,7 +66,7 @@ class StateMachine:
         return not self._transitions.get(state, set())
 ```
 
-### Testes (`test/python/test_status_flow.py`)
+### Testes (`test/test_status_flow.py`)
 
 ```python
 import pytest
