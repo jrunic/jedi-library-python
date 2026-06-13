@@ -46,3 +46,93 @@ def test_host_sem_dominio(capsys):
     entry = json.loads(capsys.readouterr().out.strip())
     assert "." not in entry["host"]
     assert entry["host"] == socket.gethostname().split(".")[0]
+
+
+def test_service_presente_quando_configurado(capsys):
+    log.setup(actor="a", actor_kind="b", service="meu-srv", service_version="1.0")
+    logging.getLogger("test").info("msg")
+    entry = json.loads(capsys.readouterr().out.strip())
+    assert entry["service"] == "meu-srv"
+    assert entry["service_version"] == "1.0"
+
+
+def test_service_ausente_quando_nao_configurado(capsys):
+    log.setup(actor="a", actor_kind="b")
+    logging.getLogger("test").info("msg")
+    entry = json.loads(capsys.readouterr().out.strip())
+    assert "service" not in entry
+    assert "service_version" not in entry
+
+
+def test_execution_id_aparece_apos_set(capsys):
+    log.setup(actor="a", actor_kind="b")
+    log.set_execution_id("exec-123")
+    logging.getLogger("test").info("msg")
+    entry = json.loads(capsys.readouterr().out.strip())
+    assert entry["execution_id"] == "exec-123"
+
+
+def test_execution_id_desaparece_apos_clear(capsys):
+    log.setup(actor="a", actor_kind="b")
+    log.set_execution_id("exec-xyz")
+    log.clear_execution_id()
+    logging.getLogger("test").info("msg")
+    entry = json.loads(capsys.readouterr().out.strip())
+    assert "execution_id" not in entry
+
+
+def test_execution_id_sem_vazamento_entre_contextos(capsys):
+    log.setup(actor="a", actor_kind="b")
+    log.set_execution_id("ctx-pai")
+
+    entries_filho = []
+
+    def filho():
+        log.clear_execution_id()
+        logging.getLogger("test").info("filho")
+        out = capsys.readouterr().out.strip()
+        if out:
+            entries_filho.append(json.loads(out))
+
+    copy_context().run(filho)
+
+    logging.getLogger("test").info("pai")
+    entry_pai = json.loads(capsys.readouterr().out.strip())
+    assert entry_pai["execution_id"] == "ctx-pai"
+    assert entries_filho and "execution_id" not in entries_filho[0]
+
+
+def test_metadata_de_extra(capsys):
+    log.setup(actor="a", actor_kind="b")
+    logging.getLogger("test").info("msg", extra={"task_id": 42, "status": "ok"})
+    entry = json.loads(capsys.readouterr().out.strip())
+    assert entry["metadata"]["task_id"] == 42
+    assert entry["metadata"]["status"] == "ok"
+
+
+def test_exc_estruturado(capsys):
+    log.setup(actor="a", actor_kind="b")
+    try:
+        raise ValueError("valor inválido")
+    except ValueError:
+        logging.getLogger("test").exception("falha")
+    entry = json.loads(capsys.readouterr().out.strip())
+    assert entry["exc"]["type"] == "ValueError"
+    assert "valor inválido" in entry["exc"]["msg"]
+    assert "traceback" in entry["exc"]
+
+
+def test_idempotencia_setup_nao_duplica_handler(capsys):
+    log.setup(actor="a", actor_kind="b")
+    log.setup(actor="c", actor_kind="d")
+    logging.getLogger("test").info("msg")
+    lines = [l for l in capsys.readouterr().out.splitlines() if l]
+    assert len(lines) == 1
+
+
+def test_jedi_log_actor_env_sobrescreve_user(capsys, monkeypatch):
+    monkeypatch.setenv("JEDI_LOG_ACTOR", "actor-do-env")
+    log.setup()
+    logging.getLogger("test").info("msg")
+    entry = json.loads(capsys.readouterr().out.strip())
+    assert entry["actor"] == "actor-do-env"
