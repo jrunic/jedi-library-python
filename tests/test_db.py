@@ -60,3 +60,47 @@ def test_apply_migrations_idempotente(tmp_path):
     count = conn.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0]
     assert count == 3  # V001, V002, V003
     conn.close()
+
+
+def test_apply_migrations_hash_mismatch_levanta_erro(tmp_path):
+    conn = db.open_connection(tmp_path / "test.db")
+    db.apply_migrations(conn, "fixtures_db", "migrations_sql")
+    conn.execute("UPDATE schema_migrations SET hash = 'hash_falso' WHERE versao = 'V001'")
+    conn.commit()
+    with pytest.raises(ValueError, match="modificada após aplicação"):
+        db.apply_migrations(conn, "fixtures_db", "migrations_sql")
+    conn.close()
+
+
+def test_apply_migrations_rollback_em_falha_nao_registra_versao(tmp_path):
+    conn = db.open_connection(tmp_path / "test.db")
+    with pytest.raises(Exception):
+        db.apply_migrations(conn, "fixtures_db_broken", "migrations_sql")
+    versoes = [r["versao"] for r in conn.execute("SELECT versao FROM schema_migrations").fetchall()]
+    assert "V001" in versoes
+    assert "V002" not in versoes
+    conn.close()
+
+
+def test_apply_migrations_ignora_arquivo_fora_do_padrao(tmp_path):
+    conn = db.open_connection(tmp_path / "test.db")
+    db.apply_migrations(conn, "fixtures_db", "migrations_sql")
+    versoes = [r["versao"] for r in conn.execute("SELECT versao FROM schema_migrations").fetchall()]
+    for v in versoes:
+        assert re.match(r"^V\d+$", v), f"Versão com formato inválido registrada: {v!r}"
+    conn.close()
+
+
+def test_apply_migrations_fk_check_detecta_violacao(tmp_path):
+    conn = db.open_connection(tmp_path / "test.db")
+    with pytest.raises(ValueError, match="Violações de FK"):
+        db.apply_migrations(conn, "fixtures_db_fk", "migrations_sql")
+    conn.close()
+
+
+def test_apply_migrations_splitter_ponto_virgula_em_string(tmp_path):
+    conn = db.open_connection(tmp_path / "test.db")
+    db.apply_migrations(conn, "fixtures_db", "migrations_sql")
+    count = conn.execute("SELECT COUNT(*) FROM meta").fetchone()[0]
+    assert count >= 1
+    conn.close()
