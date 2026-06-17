@@ -5,7 +5,6 @@ description = "Utilities for Jedi Labs Python projects"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "google-auth>=2.0",
-    "google-api-python-client>=2.0",
     "google-genai>=1.0",
     "sqlparse>=0.5,<1.0",
 ]

@@ -38,12 +38,13 @@ Tech (SRE).
 jedi_library/
 ├── __init__.py        # re-exporta submódulos
 ├── log.py             # logging JSON estruturado em stdout
-├── ai.py              # Vertex AI (Gemini)
+├── ai.py              # Vertex AI (Gemini) — classe JediAI
 ├── datetime_utils.py  # constantes TZ e funções TZ-explícitas
 ├── slug.py            # normalização NFKD + unicidade
 ├── status_flow.py     # StateMachine de transições
 ├── assets.py          # importlib.resources wrapper
 ├── db.py              # engine SQLite com migrations SQL-puro
+├── utils.py           # utilitários de string (prepare_prompt)
 └── _fixtures/         # fixture interna para testes de assets/db
 ```
 
@@ -57,8 +58,10 @@ Convenção de import: sempre `from jedi_library import log` — nunca `import j
 ### Autenticação
 
 - Nunca hardcodar credenciais no código.
-- Prioridade: `GOOGLE_CREDENTIALS_FILE` (Service Account JSON) → ADC (`google.auth.default()`).
-- Credenciais vivem em `~/.config/jedi-secrets/<projeto>/google-credentials.json`.
+- Credenciais são sempre passadas explicitamente ao construtor `JediAI` — sem fallback para ADC implícito.
+- Caminho primário: `JediAI.from_service_account_file(path, project=...)` com SA JSON.
+- Conveniência single-tenant: `JediAI.from_env()` lê `GOOGLE_APPLICATION_CREDENTIALS` + `JEDI_AI_GCP_PROJECT_ID`. Suporta SA JSON, authorized user e workload identity via `google.auth.load_credentials_from_file`.
+- Naming e path dos arquivos de credenciais são responsabilidade do `jd-secrets` — não da lib.
 
 ### Logging
 
@@ -110,9 +113,9 @@ Novos submódulos entram quando há 2 consumidores reais. Exceção registrada p
 
 - `requires-python = ">=3.12,<3.13"` — nunca usar outra versão; pin da frota (ADR `20260511`).
 - `from jedi_library import <submodulo>` — nunca `import jedi_log` ou `import jedi_ai` direto; convenção do package único.
-- `cost_context` obrigatório em toda chamada de `data_extract_*` — sem ele, a função lança `ValueError` antes de consumir tokens.
-- Prompts para `call_vertex_ai` devem instruir o modelo a responder exclusivamente em JSON — o parser lança `ValueError` em resposta não-JSON.
-- `JEDI_AI_GCP_PROJECT_ID` deve ser variável de ambiente, nunca hardcoded.
-- Nunca suprimir exceções de `data_extract_*` com `except: pass` — `log_usage` de erro já foi registrado; suprimir oculta falhas do pipeline.
+- `JediAI` exige `credentials` explícito na construção — `credentials=None` levanta `ValueError`.
+- Prompts para `JediAI.call_vertex_ai` devem instruir o modelo a responder exclusivamente em JSON — o parser lança `ValueError` em resposta não-JSON.
+- `JEDI_AI_GCP_PROJECT_ID` e `GOOGLE_APPLICATION_CREDENTIALS` são obrigatórios em `JediAI.from_env()` — ausência levanta `RuntimeError`.
+- Nunca suprimir exceções de `data_extract_*` com `except: pass` — `usage_handler` de erro já foi disparado; suprimir oculta falhas do pipeline.
 - Separador de migrations é `__` (duplo underline): `V001__descricao.sql` — nunca `V001-descricao.sql`.
 - Fixture packages para `jedi_library.db` precisam de `__init__.py` em cada nível do diretório.
