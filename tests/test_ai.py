@@ -662,3 +662,53 @@ def test_data_extract_pdf_com_generation_config(ai_client, mock_genai, tmp_path)
     )
     config = mock_client.models.generate_content.call_args.kwargs["config"]
     assert config == {"temperature": 0.1, "top_k": 32}
+
+
+# ---------------------------------------------------------------------------
+# generation_config em data_extract_ofx e data_extract_csv
+# ---------------------------------------------------------------------------
+
+def test_data_extract_ofx_com_generation_config(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    ofx_file = tmp_path / "extrato.ofx"
+    ofx_file.write_text("OFX DATA", encoding="utf-8")
+    ai_client.data_extract_ofx(
+        str(ofx_file), "p",
+        generation_config={"temperature": 0.1}
+    )
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert config == {"temperature": 0.1}
+
+
+def test_data_extract_ofx_generation_config_e_schema_juntos_levanta(ai_client, tmp_path):
+    ofx_file = tmp_path / "e.ofx"
+    ofx_file.write_text("x", encoding="utf-8")
+    with pytest.raises(ValueError, match="generation_config"):
+        ai_client.data_extract_ofx(
+            str(ofx_file), "p",
+            generation_config={"temperature": 0.1},
+            response_schema={"type": "object"},
+        )
+
+
+def test_data_extract_csv_com_generation_config(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    csv_file = tmp_path / "dados.csv"
+    csv_file.write_text("col1,col2\n1,2", encoding="utf-8")
+    ai_client.data_extract_csv(
+        str(csv_file), "p",
+        generation_config={"temperature": 0.1}
+    )
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert config == {"temperature": 0.1}
+
+
+def test_data_extract_csv_generation_config_e_schema_juntos_levanta(ai_client, tmp_path):
+    csv_file = tmp_path / "d.csv"
+    csv_file.write_text("x", encoding="utf-8")
+    with pytest.raises(ValueError, match="generation_config"):
+        ai_client.data_extract_csv(
+            str(csv_file), "p",
+            generation_config={"temperature": 0.1},
+            response_schema={"type": "object"},
+        )

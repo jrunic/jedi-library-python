@@ -280,18 +280,23 @@ class JediAI:
         model: str = DEFAULT_MODEL,
         execution_id: str | None = None,
         response_schema: dict | None = None,
+        generation_config: dict | None = None,
     ) -> dict:
+        if generation_config is not None and response_schema is not None:
+            raise ValueError(
+                "Passe generation_config OU response_schema, não os dois. "
+                "Se precisa de ambos, inclua response_schema dentro de generation_config."
+            )
         with open(file_path, encoding="utf-8", errors="replace") as f:
             content = f.read()
         full_prompt = prompt_text + "\n\n" + content
+        config = generation_config if generation_config is not None else _build_config(response_schema)
 
         status = "success"
         token_counts = {"prompt_token_count": 0, "candidates_token_count": 0, "total_token_count": 0}
 
         try:
-            response = self._call_vertex_raw(
-                full_prompt, model, _build_config(response_schema)
-            )
+            response = self._call_vertex_raw(full_prompt, model, config)
             token_counts = _extract_token_counts(response)
             result = json.loads(response.text)
         except Exception:
@@ -311,18 +316,23 @@ class JediAI:
         model: str = DEFAULT_MODEL,
         execution_id: str | None = None,
         response_schema: dict | None = None,
+        generation_config: dict | None = None,
     ) -> dict:
+        if generation_config is not None and response_schema is not None:
+            raise ValueError(
+                "Passe generation_config OU response_schema, não os dois. "
+                "Se precisa de ambos, inclua response_schema dentro de generation_config."
+            )
         with open(file_path, encoding="utf-8", errors="replace") as f:
             content = f.read()
         full_prompt = prompt_text + "\n\n" + content
+        config = generation_config if generation_config is not None else _build_config(response_schema)
 
         status = "success"
         token_counts = {"prompt_token_count": 0, "candidates_token_count": 0, "total_token_count": 0}
 
         try:
-            response = self._call_vertex_raw(
-                full_prompt, model, _build_config(response_schema)
-            )
+            response = self._call_vertex_raw(full_prompt, model, config)
             token_counts = _extract_token_counts(response)
             result = json.loads(response.text)
         except Exception:
