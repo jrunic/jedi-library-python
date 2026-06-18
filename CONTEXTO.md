@@ -109,6 +109,26 @@ Novos submódulos entram quando há 2 consumidores reais. Exceção registrada p
 - Testes de `db` usam banco em memória ou `tmp_path` — nunca banco fixo em disco.
 - Não mockar `sqlite3` — testes de integração real com o banco.
 
+## API JediAI — Padrões v0.3
+
+### `data_extract_*`
+
+- `data_extract_file(file_path, mime_type, prompt_text, *, ...)` — núcleo genérico para binários via `inline_data`; suporta qualquer `mime_type`.
+- `data_extract_pdf` é wrapper thin de `data_extract_file` — passa `_function_name="data_extract_pdf"` para preservar `usage["function"]`.
+- Todos os `data_extract_*` aceitam `generation_config: dict | None` OU `response_schema: dict | None` — nunca os dois juntos (levanta `ValueError`).
+- Limite de 7 MB por arquivo em `data_extract_file` — exceder levanta `ValueError`.
+
+### `call_vertex_ai`
+
+- Aceita `prompt_text: str | None` OU `contents: list | None` — nunca os dois juntos, nunca nenhum (levanta `ValueError`).
+- `contents` é escape hatch para payloads multipart (ex: imagens) sem passar por `data_extract_file`.
+
+### Retry em `_call_vertex_raw`
+
+- Retry automático (até 3 tentativas) em HTTP 429 e 5xx exceto 501.
+- Detecção via `getattr(e, "code", None)` — não string match.
+- Backoff: `2 ** attempt * 2 + random.uniform(0, 0.5)` segundos.
+
 ## Restrições
 
 - `requires-python = ">=3.12,<3.13"` — nunca usar outra versão; pin da frota (ADR `20260511`).
@@ -117,5 +137,6 @@ Novos submódulos entram quando há 2 consumidores reais. Exceção registrada p
 - Prompts para `JediAI.call_vertex_ai` devem instruir o modelo a responder exclusivamente em JSON — o parser lança `ValueError` em resposta não-JSON.
 - `JEDI_AI_GCP_PROJECT_ID` e `GOOGLE_APPLICATION_CREDENTIALS` são obrigatórios em `JediAI.from_env()` — ausência levanta `RuntimeError`.
 - Nunca suprimir exceções de `data_extract_*` com `except: pass` — `usage_handler` de erro já foi disparado; suprimir oculta falhas do pipeline.
+- `generation_config` e `response_schema` são mutuamente exclusivos em todos os métodos `JediAI` — passar os dois levanta `ValueError`.
 - Separador de migrations é `__` (duplo underline): `V001__descricao.sql` — nunca `V001-descricao.sql`.
 - Fixture packages para `jedi_library.db` precisam de `__init__.py` em cada nível do diretório.
