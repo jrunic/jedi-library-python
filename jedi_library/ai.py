@@ -244,6 +244,51 @@ class JediAI:
 
         return {"result": result, "usage": _usage}
 
+    def data_extract_file(
+        self,
+        file_path: str,
+        mime_type: str,
+        prompt_text: str,
+        *,
+        model: str = DEFAULT_MODEL,
+        execution_id: str | None = None,
+        response_schema: dict | None = None,
+        generation_config: dict | None = None,
+        _function_name: str = "data_extract_file",
+    ) -> dict:
+        if generation_config is not None and response_schema is not None:
+            raise ValueError(
+                "Passe generation_config OU response_schema, não os dois. "
+                "Se precisa de ambos, inclua response_schema dentro de generation_config."
+            )
+        file_bytes = _read_file_bytes(file_path)
+        if len(file_bytes) > MAX_PDF_BYTES:
+            raise ValueError(
+                f"Arquivo excede limite de 7 MB para inlineData ({len(file_bytes)} bytes)."
+            )
+        file_b64 = base64.b64encode(file_bytes).decode("utf-8")
+        contents = [{"role": "user", "parts": [
+            {"inline_data": {"mime_type": mime_type, "data": file_b64}},
+            {"text": prompt_text},
+        ]}]
+        config = generation_config if generation_config is not None else _build_config(response_schema)
+
+        status = "success"
+        token_counts = {"prompt_token_count": 0, "candidates_token_count": 0, "total_token_count": 0}
+
+        try:
+            response = self._call_vertex_raw(contents, model, config)
+            token_counts = _extract_token_counts(response)
+            result = json.loads(response.text)
+        except Exception:
+            status = "error"
+            raise
+        finally:
+            _usage = _build_usage(model, _function_name, token_counts, status, execution_id)
+            self._dispatch_usage(_usage)
+
+        return {"result": result, "usage": _usage}
+
     def data_extract_ofx(
         self,
         file_path: str,

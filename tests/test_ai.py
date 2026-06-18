@@ -568,3 +568,64 @@ def test_jitter_aplicado_no_backoff(ai_client, mock_genai):
     sleep_arg = mock_sleep.call_args[0][0]
     # 2**0 * 2 + 0.3 = 2.3; valor puro seria 2
     assert sleep_arg == pytest.approx(2.3)
+
+
+# ---------------------------------------------------------------------------
+# data_extract_file
+# ---------------------------------------------------------------------------
+
+def test_data_extract_file_monta_mime_type_correto(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    img = tmp_path / "foto.jpg"
+    img.write_bytes(b"\xff\xd8\xff fake jpeg")
+    ai_client.data_extract_file(str(img), "image/jpeg", "extraia dados")
+    call_args = mock_client.models.generate_content.call_args
+    contents = call_args.kwargs["contents"]
+    assert contents[0]["parts"][0]["inline_data"]["mime_type"] == "image/jpeg"
+
+
+def test_data_extract_file_role_user(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    img = tmp_path / "doc.png"
+    img.write_bytes(b"PNG fake")
+    ai_client.data_extract_file(str(img), "image/png", "extraia")
+    call_args = mock_client.models.generate_content.call_args
+    contents = call_args.kwargs["contents"]
+    assert contents[0]["role"] == "user"
+
+
+def test_data_extract_file_usage_function_name(ai_client, mock_genai, tmp_path):
+    img = tmp_path / "doc.jpg"
+    img.write_bytes(b"fake")
+    response = ai_client.data_extract_file(str(img), "image/jpeg", "p")
+    assert response["usage"]["function"] == "data_extract_file"
+
+
+def test_data_extract_file_com_generation_config(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    img = tmp_path / "doc.jpg"
+    img.write_bytes(b"fake")
+    ai_client.data_extract_file(
+        str(img), "image/jpeg", "p",
+        generation_config={"temperature": 0.1, "top_k": 32}
+    )
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert config == {"temperature": 0.1, "top_k": 32}
+
+
+def test_data_extract_file_generation_config_e_schema_juntos_levanta(ai_client, tmp_path):
+    img = tmp_path / "doc.jpg"
+    img.write_bytes(b"fake")
+    with pytest.raises(ValueError, match="generation_config"):
+        ai_client.data_extract_file(
+            str(img), "image/jpeg", "p",
+            generation_config={"temperature": 0.1},
+            response_schema={"type": "object"},
+        )
+
+
+def test_data_extract_file_arquivo_grande_levanta_value_error(ai_client, tmp_path):
+    big_file = tmp_path / "foto.jpg"
+    big_file.write_bytes(b"x" * (7 * 1024 * 1024 + 1))
+    with pytest.raises(ValueError, match="7 MB"):
+        ai_client.data_extract_file(str(big_file), "image/jpeg", "p")
