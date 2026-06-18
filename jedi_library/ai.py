@@ -215,7 +215,7 @@ class JediAI:
                 f"PDF excede limite de 7 MB para inlineData ({len(pdf_bytes)} bytes)."
             )
         pdf_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
-        contents = [{"parts": [
+        contents = [{"role": "user", "parts": [
             {"inline_data": {"mime_type": "application/pdf", "data": pdf_b64}},
             {"text": prompt_text},
         ]}]

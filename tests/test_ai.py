@@ -259,6 +259,7 @@ def test_data_extract_pdf_passa_inline_data_ao_vertex(ai_client, mock_genai, tmp
     ai_client.data_extract_pdf(str(pdf_file), "meu prompt")
     call_args = mock_client.models.generate_content.call_args
     contents = call_args.kwargs["contents"]
+    assert contents[0]["role"] == "user"
     parts = contents[0]["parts"]
     assert parts[0]["inline_data"]["mime_type"] == "application/pdf"
     assert parts[0]["inline_data"]["data"] == base64.b64encode(b"PDFBYTES").decode()
