@@ -175,25 +175,35 @@ class JediAI:
 
     def call_vertex_ai(
         self,
-        prompt_text: str,
+        prompt_text: str | None = None,
         *,
         model: str = DEFAULT_MODEL,
         generation_config: dict | None = None,
         response_schema: dict | None = None,
         execution_id: str | None = None,
+        contents: list | None = None,
     ) -> dict:
+        if prompt_text is not None and contents is not None:
+            raise ValueError(
+                "Passe prompt_text OU contents, não os dois."
+            )
+        if prompt_text is None and contents is None:
+            raise ValueError(
+                "Um de prompt_text ou contents é obrigatório."
+            )
         if generation_config is not None and response_schema is not None:
             raise ValueError(
                 "Passe generation_config OU response_schema, não os dois. "
                 "Se precisa de ambos, inclua response_schema dentro de generation_config."
             )
         config = generation_config if generation_config is not None else _build_config(response_schema)
+        _contents = contents if contents is not None else prompt_text
         status = "success"
         token_counts = {"prompt_token_count": 0, "candidates_token_count": 0, "total_token_count": 0}
         raw_text = ""
 
         try:
-            response = self._call_vertex_raw(prompt_text, model, config)
+            response = self._call_vertex_raw(_contents, model, config)
             raw_text = response.text
             token_counts = _extract_token_counts(response)
             result = json.loads(raw_text)

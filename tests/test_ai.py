@@ -712,3 +712,31 @@ def test_data_extract_csv_generation_config_e_schema_juntos_levanta(ai_client, t
             generation_config={"temperature": 0.1},
             response_schema={"type": "object"},
         )
+
+
+# ---------------------------------------------------------------------------
+# call_vertex_ai — contents externo
+# ---------------------------------------------------------------------------
+
+def test_call_vertex_ai_com_contents_externo(ai_client, mock_genai):
+    _, mock_client, _ = mock_genai
+    contents = [{"role": "user", "parts": [
+        {"inline_data": {"mime_type": "image/jpeg", "data": "base64aqui"}},
+        {"text": "extraia"},
+    ]}]
+    ai_client.call_vertex_ai(contents=contents)
+    call_args = mock_client.models.generate_content.call_args
+    assert call_args.kwargs["contents"] == contents
+
+
+def test_call_vertex_ai_prompt_e_contents_juntos_levanta(ai_client, mock_genai):
+    with pytest.raises(ValueError, match="prompt_text"):
+        ai_client.call_vertex_ai(
+            "meu prompt",
+            contents=[{"role": "user", "parts": [{"text": "outro"}]}],
+        )
+
+
+def test_call_vertex_ai_sem_prompt_e_sem_contents_levanta(ai_client, mock_genai):
+    with pytest.raises(ValueError, match="prompt_text"):
+        ai_client.call_vertex_ai()
