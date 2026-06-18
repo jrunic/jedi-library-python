@@ -214,35 +214,18 @@ class JediAI:
         model: str = DEFAULT_MODEL,
         execution_id: str | None = None,
         response_schema: dict | None = None,
+        generation_config: dict | None = None,
     ) -> dict:
-        pdf_bytes = _read_file_bytes(file_path)
-        if len(pdf_bytes) > MAX_PDF_BYTES:
-            raise ValueError(
-                f"PDF excede limite de 7 MB para inlineData ({len(pdf_bytes)} bytes)."
-            )
-        pdf_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
-        contents = [{"role": "user", "parts": [
-            {"inline_data": {"mime_type": "application/pdf", "data": pdf_b64}},
-            {"text": prompt_text},
-        ]}]
-
-        status = "success"
-        token_counts = {"prompt_token_count": 0, "candidates_token_count": 0, "total_token_count": 0}
-
-        try:
-            response = self._call_vertex_raw(
-                contents, model, _build_config(response_schema)
-            )
-            token_counts = _extract_token_counts(response)
-            result = json.loads(response.text)
-        except Exception:
-            status = "error"
-            raise
-        finally:
-            _usage = _build_usage(model, "data_extract_pdf", token_counts, status, execution_id)
-            self._dispatch_usage(_usage)
-
-        return {"result": result, "usage": _usage}
+        return self.data_extract_file(
+            file_path,
+            "application/pdf",
+            prompt_text,
+            model=model,
+            execution_id=execution_id,
+            response_schema=response_schema,
+            generation_config=generation_config,
+            _function_name="data_extract_pdf",
+        )
 
     def data_extract_file(
         self,

@@ -629,3 +629,36 @@ def test_data_extract_file_arquivo_grande_levanta_value_error(ai_client, tmp_pat
     big_file.write_bytes(b"x" * (7 * 1024 * 1024 + 1))
     with pytest.raises(ValueError, match="7 MB"):
         ai_client.data_extract_file(str(big_file), "image/jpeg", "p")
+
+
+# ---------------------------------------------------------------------------
+# data_extract_pdf como wrapper de data_extract_file
+# ---------------------------------------------------------------------------
+
+def test_data_extract_pdf_delega_mime_type_pdf(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    pdf_file = tmp_path / "doc.pdf"
+    pdf_file.write_bytes(b"fake pdf")
+    ai_client.data_extract_pdf(str(pdf_file), "prompt")
+    call_args = mock_client.models.generate_content.call_args
+    contents = call_args.kwargs["contents"]
+    assert contents[0]["parts"][0]["inline_data"]["mime_type"] == "application/pdf"
+
+
+def test_data_extract_pdf_usage_function_name_preservado(ai_client, mock_genai, tmp_path):
+    pdf_file = tmp_path / "doc.pdf"
+    pdf_file.write_bytes(b"fake")
+    response = ai_client.data_extract_pdf(str(pdf_file), "p")
+    assert response["usage"]["function"] == "data_extract_pdf"
+
+
+def test_data_extract_pdf_com_generation_config(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    pdf_file = tmp_path / "doc.pdf"
+    pdf_file.write_bytes(b"fake")
+    ai_client.data_extract_pdf(
+        str(pdf_file), "p",
+        generation_config={"temperature": 0.1, "top_k": 32}
+    )
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert config == {"temperature": 0.1, "top_k": 32}
