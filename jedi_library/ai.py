@@ -14,6 +14,7 @@ import base64
 import json
 import logging
 import os
+import random
 import time
 from typing import Callable
 
@@ -162,8 +163,13 @@ class JediAI:
                     model=model, contents=contents, config=config
                 )
             except Exception as e:
-                if "429" in str(e) and attempt < 2:
-                    time.sleep(2 ** attempt * 2)
+                code = getattr(e, "code", None)
+                is_429 = code == 429
+                is_5xx_retryable = (
+                    code is not None and 500 <= code <= 599 and code != 501
+                )
+                if (is_429 or is_5xx_retryable) and attempt < 2:
+                    time.sleep(2 ** attempt * 2 + random.uniform(0, 0.5))
                 else:
                     raise
 

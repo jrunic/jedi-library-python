@@ -4,6 +4,17 @@ from unittest.mock import MagicMock, patch
 from jedi_library.ai import JediAI, _GCP_SCOPES
 
 
+class _FakeServerError(Exception):
+    def __init__(self, code):
+        self.code = code
+        super().__init__(f"server error {code}")
+
+class _FakeClientError(Exception):
+    def __init__(self, code):
+        self.code = code
+        super().__init__(f"client error {code}")
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -200,13 +211,15 @@ def test_call_vertex_ai_erro_token_counts_sao_zeros(ai_client, mock_genai):
 def test_call_vertex_ai_retry_em_429(ai_client, mock_genai):
     _, mock_client, mock_response = mock_genai
     mock_client.models.generate_content.side_effect = [
-        Exception("429 quota"),
+        _FakeClientError(429),
         mock_response,
     ]
     with patch("jedi_library.ai.time.sleep") as mock_sleep:
         response = ai_client.call_vertex_ai("p")
     assert response["result"] == {"valor": 42}
-    mock_sleep.assert_called_once_with(2)
+    mock_sleep.assert_called_once()
+    sleep_arg = mock_sleep.call_args[0][0]
+    assert sleep_arg >= 2  # base backoff de 2^0 * 2 = 2
 
 
 # ---------------------------------------------------------------------------
@@ -516,3 +529,42 @@ def test_call_vertex_ai_schema_e_generation_config_juntos_levanta_value_error(ai
             response_schema={"type": "object"},
         )
     mock_client.models.generate_content.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# _call_vertex_raw — retry 5xx e jitter
+# ---------------------------------------------------------------------------
+
+def test_retry_em_503_sucesso_na_terceira(ai_client, mock_genai):
+    _, mock_client, mock_response = mock_genai
+    mock_client.models.generate_content.side_effect = [
+        _FakeServerError(503),
+        _FakeServerError(503),
+        mock_response,
+    ]
+    with patch("jedi_library.ai.time.sleep"):
+        response = ai_client.call_vertex_ai("p")
+    assert response["result"] == {"valor": 42}
+    assert mock_client.models.generate_content.call_count == 3
+
+
+def test_sem_retry_em_501(ai_client, mock_genai):
+    _, mock_client, _ = mock_genai
+    mock_client.models.generate_content.side_effect = _FakeServerError(501)
+    with pytest.raises(_FakeServerError):
+        ai_client.call_vertex_ai("p")
+    assert mock_client.models.generate_content.call_count == 1
+
+
+def test_jitter_aplicado_no_backoff(ai_client, mock_genai):
+    _, mock_client, mock_response = mock_genai
+    mock_client.models.generate_content.side_effect = [
+        _FakeClientError(429),
+        mock_response,
+    ]
+    with patch("jedi_library.ai.time.sleep") as mock_sleep:
+        with patch("jedi_library.ai.random.uniform", return_value=0.3):
+            ai_client.call_vertex_ai("p")
+    sleep_arg = mock_sleep.call_args[0][0]
+    # 2**0 * 2 + 0.3 = 2.3; valor puro seria 2
+    assert sleep_arg == pytest.approx(2.3)
