@@ -385,3 +385,133 @@ def test_handler_injetado_na_construcao(mock_genai, mock_creds):
     ai = JediAI(project="p", credentials=mock_creds, usage_handler=captured.append)
     ai.call_vertex_ai("p")
     assert len(captured) == 1
+
+
+# ---------------------------------------------------------------------------
+# response_schema — data_extract_*
+# ---------------------------------------------------------------------------
+
+def test_data_extract_pdf_schema_incluido_no_config(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    schema = {"type": "object", "properties": {"valor": {"type": "integer"}}}
+    pdf_file = tmp_path / "doc.pdf"
+    pdf_file.write_bytes(b"fake pdf")
+    ai_client.data_extract_pdf(str(pdf_file), "extraia", response_schema=schema)
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert config["response_schema"] == schema
+    assert config["response_mime_type"] == "application/json"
+
+
+def test_data_extract_pdf_sem_schema_config_sem_response_schema(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    pdf_file = tmp_path / "doc.pdf"
+    pdf_file.write_bytes(b"fake pdf")
+    ai_client.data_extract_pdf(str(pdf_file), "extraia")
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert "response_schema" not in config
+    assert config["response_mime_type"] == "application/json"
+
+
+def test_data_extract_pdf_schema_nao_dict_levanta_value_error(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    pdf_file = tmp_path / "doc.pdf"
+    pdf_file.write_bytes(b"fake pdf")
+    with pytest.raises(ValueError, match="dict"):
+        ai_client.data_extract_pdf(str(pdf_file), "p", response_schema="nao-e-dict")
+    mock_client.models.generate_content.assert_not_called()
+
+
+def test_data_extract_ofx_schema_incluido_no_config(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    schema = {"type": "object", "properties": {"total": {"type": "number"}}}
+    ofx_file = tmp_path / "extrato.ofx"
+    ofx_file.write_text("OFX DATA", encoding="utf-8")
+    ai_client.data_extract_ofx(str(ofx_file), "extraia", response_schema=schema)
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert config["response_schema"] == schema
+    assert config["response_mime_type"] == "application/json"
+
+
+def test_data_extract_ofx_sem_schema_config_sem_response_schema(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    ofx_file = tmp_path / "extrato.ofx"
+    ofx_file.write_text("OFX DATA", encoding="utf-8")
+    ai_client.data_extract_ofx(str(ofx_file), "extraia")
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert "response_schema" not in config
+
+
+def test_data_extract_ofx_schema_nao_dict_levanta_value_error(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    ofx_file = tmp_path / "e.ofx"
+    ofx_file.write_text("x", encoding="utf-8")
+    with pytest.raises(ValueError, match="dict"):
+        ai_client.data_extract_ofx(str(ofx_file), "p", response_schema=["lista"])
+    mock_client.models.generate_content.assert_not_called()
+
+
+def test_data_extract_csv_schema_incluido_no_config(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    schema = {"type": "object", "properties": {"linhas": {"type": "array"}}}
+    csv_file = tmp_path / "dados.csv"
+    csv_file.write_text("col1,col2\n1,2", encoding="utf-8")
+    ai_client.data_extract_csv(str(csv_file), "extraia", response_schema=schema)
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert config["response_schema"] == schema
+    assert config["response_mime_type"] == "application/json"
+
+
+def test_data_extract_csv_sem_schema_config_sem_response_schema(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    csv_file = tmp_path / "dados.csv"
+    csv_file.write_text("col1,col2\n1,2", encoding="utf-8")
+    ai_client.data_extract_csv(str(csv_file), "extraia")
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert "response_schema" not in config
+
+
+def test_data_extract_csv_schema_nao_dict_levanta_value_error(ai_client, mock_genai, tmp_path):
+    _, mock_client, _ = mock_genai
+    csv_file = tmp_path / "d.csv"
+    csv_file.write_text("x", encoding="utf-8")
+    with pytest.raises(ValueError, match="dict"):
+        ai_client.data_extract_csv(str(csv_file), "p", response_schema=42)
+    mock_client.models.generate_content.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# response_schema — call_vertex_ai
+# ---------------------------------------------------------------------------
+
+def test_call_vertex_ai_schema_incluido_no_config(ai_client, mock_genai):
+    _, mock_client, _ = mock_genai
+    schema = {"type": "object", "properties": {"resposta": {"type": "string"}}}
+    ai_client.call_vertex_ai("prompt", response_schema=schema)
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert config["response_schema"] == schema
+    assert config["response_mime_type"] == "application/json"
+
+
+def test_call_vertex_ai_sem_schema_config_sem_response_schema(ai_client, mock_genai):
+    _, mock_client, _ = mock_genai
+    ai_client.call_vertex_ai("prompt")
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert "response_schema" not in config
+
+
+def test_call_vertex_ai_schema_nao_dict_levanta_value_error(ai_client, mock_genai):
+    _, mock_client, _ = mock_genai
+    with pytest.raises(ValueError, match="dict"):
+        ai_client.call_vertex_ai("prompt", response_schema="invalido")
+    mock_client.models.generate_content.assert_not_called()
+
+
+def test_call_vertex_ai_schema_e_generation_config_juntos_levanta_value_error(ai_client, mock_genai):
+    _, mock_client, _ = mock_genai
+    with pytest.raises(ValueError, match="generation_config"):
+        ai_client.call_vertex_ai(
+            "prompt",
+            generation_config={"temperature": 0.5},
+            response_schema={"type": "object"},
+        )
+    mock_client.models.generate_content.assert_not_called()

@@ -56,6 +56,17 @@ def _build_usage(
     }
 
 
+def _build_config(response_schema: dict | None) -> dict:
+    if response_schema is not None and not isinstance(response_schema, dict):
+        raise ValueError(
+            f"response_schema deve ser dict, recebido {type(response_schema).__name__}."
+        )
+    config: dict = {"response_mime_type": "application/json"}
+    if response_schema is not None:
+        config["response_schema"] = response_schema
+    return config
+
+
 def _read_file_bytes(file_path: str) -> bytes:
     with open(file_path, "rb") as f:
         return f.read()
@@ -162,9 +173,15 @@ class JediAI:
         *,
         model: str = DEFAULT_MODEL,
         generation_config: dict | None = None,
+        response_schema: dict | None = None,
         execution_id: str | None = None,
     ) -> dict:
-        config = generation_config or {"response_mime_type": "application/json"}
+        if generation_config is not None and response_schema is not None:
+            raise ValueError(
+                "Passe generation_config OU response_schema, não os dois. "
+                "Se precisa de ambos, inclua response_schema dentro de generation_config."
+            )
+        config = generation_config if generation_config is not None else _build_config(response_schema)
         status = "success"
         token_counts = {"prompt_token_count": 0, "candidates_token_count": 0, "total_token_count": 0}
         raw_text = ""
@@ -190,6 +207,7 @@ class JediAI:
         *,
         model: str = DEFAULT_MODEL,
         execution_id: str | None = None,
+        response_schema: dict | None = None,
     ) -> dict:
         pdf_bytes = _read_file_bytes(file_path)
         if len(pdf_bytes) > MAX_PDF_BYTES:
@@ -207,7 +225,7 @@ class JediAI:
 
         try:
             response = self._call_vertex_raw(
-                contents, model, {"response_mime_type": "application/json"}
+                contents, model, _build_config(response_schema)
             )
             token_counts = _extract_token_counts(response)
             result = json.loads(response.text)
@@ -227,6 +245,7 @@ class JediAI:
         *,
         model: str = DEFAULT_MODEL,
         execution_id: str | None = None,
+        response_schema: dict | None = None,
     ) -> dict:
         with open(file_path, encoding="utf-8", errors="replace") as f:
             content = f.read()
@@ -237,7 +256,7 @@ class JediAI:
 
         try:
             response = self._call_vertex_raw(
-                full_prompt, model, {"response_mime_type": "application/json"}
+                full_prompt, model, _build_config(response_schema)
             )
             token_counts = _extract_token_counts(response)
             result = json.loads(response.text)
@@ -257,6 +276,7 @@ class JediAI:
         *,
         model: str = DEFAULT_MODEL,
         execution_id: str | None = None,
+        response_schema: dict | None = None,
     ) -> dict:
         with open(file_path, encoding="utf-8", errors="replace") as f:
             content = f.read()
@@ -267,7 +287,7 @@ class JediAI:
 
         try:
             response = self._call_vertex_raw(
-                full_prompt, model, {"response_mime_type": "application/json"}
+                full_prompt, model, _build_config(response_schema)
             )
             token_counts = _extract_token_counts(response)
             result = json.loads(response.text)
