@@ -145,6 +145,7 @@ Novos submódulos entram quando há 2 consumidores reais. Exceção registrada p
 
 ## Restrições
 
+- **Repositório público não nomeia a árvore interna do autor** — nem em documento de trabalho, nem em comentário, nem no texto que documenta essa própria regra. Sem caminho absoluto, sem nome de cliente, sem estrutura de pastas interna. Varredura antes de todo push: `git log -p origin/<branch>..HEAD`. ADR `20260822-repo-declara-onde-o-trabalho-acontece` (decisão 5).
 - `requires-python = ">=3.12,<3.13"` — nunca usar outra versão; pin da frota (ADR `20260511`).
 - `from jedi_library import <submodulo>` — nunca `import jedi_log` ou `import jedi_ai` direto; convenção do package único.
 - `JediAI` exige `credentials` explícito na construção — `credentials=None` levanta `ValueError`.
