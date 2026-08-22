@@ -12,17 +12,17 @@ tags: [contexto, library, python, jedi-labs]
 # CONTEXTO.md
 ## Onde o trabalho acontece
 
-> **Este repo é PÚBLICO e ainda hospeda artefatos internos — situação a corrigir,
-> não a imitar.** `docs/11-tarefas/` tem 24 arquivos, e 4 deles nomeiam cliente
-> (`vida-imagem`, `market4u`) e caminho do brain (`/Users/jedi`, `jedi-brain`).
-> Isso contraria a ADR `20260809-spec-e-plano-fora-do-repo-publico`. Tratamento
-> endereçado ao Tech.
+> **Este repositório é público e ainda hospeda documentos internos de
+> desenvolvimento — situação a corrigir, não a imitar.** Os artefatos em
+> `docs/11-tarefas/` são escritos para quem constrói, não para quem usa, e por
+> isso não pertencem a um repositório aberto. Tratamento endereçado ao
+> mantenedor.
 
-**Enquanto a correção não sai:** não escrever spec, plano, roadmap, apoio nem
-diário neste repo. Trabalho novo vai para uma pasta de trabalho; código e
-documentação de produto continuam aqui.
+**Enquanto a correção não sai:** não escrever spec, plano, roadmap, arquivo de
+apoio nem diário aqui. Trabalho interno vai para os documentos internos do
+autor, fora deste repositório; código e documentação de produto continuam aqui.
 
-**As skills leem esta seção** em vez de inferir por visibilidade do repo. Repo
+**As skills leem esta seção** em vez de inferir por visibilidade. Repositório
 que não declara deixa a skill sem informação, e sem informação ela erra.
 
 ## Propósito
