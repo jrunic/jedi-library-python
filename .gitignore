@@ -7,3 +7,7 @@ dist/
 *.egg-info/
 .uv/
 uv.lock
+
+# INDEX-<dominio>.md sao gerados pelo jedi-gera-indice-referencia
+docs/INDEX-*.md
+docs/**/INDEX-*.md
