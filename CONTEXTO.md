@@ -12,18 +12,24 @@ tags: [contexto, library, python, jedi-labs]
 # CONTEXTO.md
 ## Onde o trabalho acontece
 
-> **Este repositório é público e ainda hospeda documentos internos de
-> desenvolvimento — situação a corrigir, não a imitar.** Os artefatos em
-> `docs/11-tarefas/` são escritos para quem constrói, não para quem usa, e por
-> isso não pertencem a um repositório aberto. Tratamento endereçado ao
-> mantenedor.
+**O trabalho de desenvolvimento acontece fora deste repositório**, nos
+documentos internos do autor.
 
-**Enquanto a correção não sai:** não escrever spec, plano, roadmap, arquivo de
-apoio nem diário aqui. Trabalho interno vai para os documentos internos do
-autor, fora deste repositório; código e documentação de produto continuam aqui.
+| Artefato | Lar canônico |
+|---|---|
+| Roadmap de ciclos, spec, plano | fora deste repositório |
+| Arquivo de apoio de tarefa, diário de sessão | fora deste repositório |
+| Discussão de negócio | fora deste repositório |
+| **Código, testes, migrations** | **este repositório** |
+| **Documentação do produto** (Diátaxis) | **este repositório**, `docs/` |
+| **ADR de contrato** | **este repositório**, `docs/decisoes/` |
+| **Modelo de domínio** | **este repositório**, `docs/dominio/` |
+| **README, CHANGELOG, GLOSSARIO, CONTEXTO** | **este repositório**, raiz |
 
-**As skills leem esta seção** em vez de inferir por visibilidade. Repositório
-que não declara deixa a skill sem informação, e sem informação ela erra.
+**Razão:** spec, plano, roadmap e diário nomeiam contexto que não pertence a um
+repositório aberto. O repositório carrega o que a audiência dele precisa.
+
+**As skills leem esta seção** em vez de inferir por visibilidade.
 
 ## Propósito
 
