@@ -48,5 +48,5 @@ Três caminhos foram considerados:
 ## Referências
 
 - ADR de split: `$JEDI_BRAIN_FOLDER/81-referencia/decisoes/20260612-jedi-library-trio-repos.md`.
-- ADR de regra de 2 consumidores: `jedi-library/docs/81-referencia/decisoes/20260612-regra-de-2-consumidores-reais.md`.
+- ADR de regra de 2 consumidores: `jedi-library/docs/decisoes/20260612-regra-de-2-consumidores-reais.md`.
 - ADR de pin Python da frota: `$JEDI_BRAIN_FOLDER/81-referencia/decisoes/20260511-versoes-fixas-runtime-frota.md`.

@@ -10,7 +10,7 @@ descricao: "Contexto de negócio do jedi-library-python: o que é, por que exist
 tags: [contexto, python]
 ---
 
-# Contexto — jedi-library-python
+# Visão geral — jedi-library-python
 
 ## O que é
 

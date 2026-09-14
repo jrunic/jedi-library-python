@@ -54,6 +54,6 @@ Engine importa a cicatriz já testada do tili (splitter de statements, savepoint
 
 ## Referências
 
-- ADR de regra de 2 consumidores: `jedi-library/docs/81-referencia/decisoes/20260612-regra-de-2-consumidores-reais.md`.
+- ADR de regra de 2 consumidores: `jedi-library/docs/decisoes/20260612-regra-de-2-consumidores-reais.md`.
 - ADR de split: `$JEDI_BRAIN_FOLDER/81-referencia/decisoes/20260612-jedi-library-trio-repos.md`.
 - ADR de template canônico de migration: `$JEDI_BRAIN_FOLDER/81-referencia/decisoes/20260519-migration-sqlite-com-fk-template-canonico.md`.

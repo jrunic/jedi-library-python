@@ -101,18 +101,18 @@ Convenção de import: sempre `from jedi_library import log` — nunca `import j
 - FK desabilitado durante migrations, reabilitado no `finally`; FK check pós-apply.
 - `sqlparse>=0.5,<1.0` como splitter (suporta `;` em strings literais e triggers).
 - Consumidores precisam declarar `package-data` no seu `pyproject.toml` para SQL files em wheel/pipx.
-- Ver ADR `docs/81-referencia/decisoes/20260612-engine-migrations-sql-puro-tabela-schema.md`.
+- Ver ADR `docs/decisoes/20260612-engine-migrations-sql-puro-tabela-schema.md`.
 
 ### Distribuição
 
 - Consumidores instalam via `uv add 'jedi-library @ git+ssh://git@github.com/jrunic/jedi-library-python.git'`.
 - Pinning automático via `uv.lock` (commit SHA gravado).
 - Upgrade consciente: `uv lock --upgrade-package jedi-library`.
-- Ver ADR `docs/81-referencia/decisoes/20260612-distribuicao-python-via-git-ssh.md`.
+- Ver ADR `docs/decisoes/20260612-distribuicao-python-via-git-ssh.md`.
 
 ## Regra de 2 consumidores reais
 
-Novos submódulos entram quando há 2 consumidores reais. Exceção registrada para libs já maduras em GAS com adoção iminente. Ver ADR em `jedi-library/docs/81-referencia/decisoes/20260612-regra-de-2-consumidores-reais.md`.
+Novos submódulos entram quando há 2 consumidores reais. Exceção registrada para libs já maduras em GAS com adoção iminente. Ver ADR em `jedi-library/docs/decisoes/20260612-regra-de-2-consumidores-reais.md`.
 
 ## Referências
 

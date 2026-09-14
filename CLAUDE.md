@@ -4,6 +4,6 @@
 @CONTEXTO.md
 @/Users/jedi/jedi-brain/81-referencia/INDEX-tecnologia.md
 @/Users/jedi/jedi-brain/81-referencia/INDEX-universal.md
-@/Users/jedi/jedi-brain/15-repositorios/jedi-library-python/docs/81-referencia/INDEX-tecnologia.md
-@/Users/jedi/jedi-brain/15-repositorios/jedi-library-python/docs/81-referencia/INDEX-universal.md
+@/Users/jedi/jedi-brain/15-repositorios/jedi-library-python/docs/INDEX-tecnologia.md
+@/Users/jedi/jedi-brain/15-repositorios/jedi-library-python/docs/INDEX-universal.md
 

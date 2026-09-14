@@ -69,4 +69,4 @@ finally:
 ## Documentação
 
 - `CONTEXTO.md` — regras Python, convenções, distribuição
-- `docs/81-referencia/arquitetura-python.md` — estrutura, fluxos, ondas de implementação
+- `docs/arquitetura-python.md` — estrutura, fluxos, ondas de implementação
