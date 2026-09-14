@@ -3,7 +3,7 @@ descricao: ADR — distribuição do jedi-library-python via `uv add git+ssh://.
 id: 202606121530
 projeto: jedi-library-python
 tipo: decisao
-status: aceito
+status: aprovado
 escopo: repo:jedi-library-python
 plataforma: "*"
 dominios: [tecnologia]

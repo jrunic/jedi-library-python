@@ -3,7 +3,7 @@ descricao: ADR — engine de migrations do jedi_db usa arquivos SQL puro carrega
 id: 202606121540
 projeto: jedi-library-python
 tipo: decisao
-status: aceito
+status: aprovado
 escopo: repo:jedi-library-python
 plataforma: "*"
 dominios: [tecnologia]
